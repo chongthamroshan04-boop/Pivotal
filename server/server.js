@@ -1,25 +1,63 @@
-import dotenv from "dotenv"
-dotenv.config()
-import interviewRoutes from "./routes/interviewRoutes.js";
-import Express from "express"
+import dotenv from "dotenv"; //dotenv is a package that helps your Node.js backend load environment variables from a .env file.
+
+dotenv.config();
+
+import Express from "express";
 import cors from "cors";
 
+import authRoutes from "./routes/authRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
+import missionProgressRoutes from "./routes/missionProgressRoutes.js";
+import pool from "./database/db.js";
+const App = Express();
 
-const App = Express()
-//to connnect react and express each other 
 App.use(cors());
+App.use(Express.json());
 
-App.use(Express.json()); 
-
-App.use("/interview", interviewRoutes)//"Any request beginning with /interview should be handled by interviewRoutes.js."
-//*create routes or connect route
-App.get("/" , (req, res)  => {
-res.send("Start Interview")
+App.use("/users", userRoutes);
+App.use("/auth", authRoutes);
+App.use("/mission-progress", missionProgressRoutes);
+App.get("/", (req, res) => {
+  res.status(200).send("PivoTal API is running");
 });
 
-// start listening
+App.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+  });
+});
+
 const PORT = process.env.PORT || 5000;
 
-App.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+async function startServer() {
+  try {
+    await pool.query("SELECT NOW()");
+
+    console.log("PostgreSQL connected");
+
+    const server = App.listen(PORT, (error) => {
+      if (error) {
+        console.error("Server failed to start:", error);
+        process.exit(1);
+      }
+
+      console.log(`Server running on port ${PORT}`);
+    });
+
+    process.on("SIGTERM", () => {
+      console.log("SIGTERM received. Shutting down server...");
+
+      server.close(async () => {
+        await pool.end();
+
+        console.log("Server closed");
+        process.exit(0);
+      });
+    });
+  } catch (error) {
+    console.error("PostgreSQL connection failed:", error.message);
+    process.exit(1);
+  }
+}
+
+startServer();
