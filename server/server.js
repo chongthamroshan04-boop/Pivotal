@@ -55,7 +55,7 @@ async function startServer() {
       });
     });
   } catch (error) {
-    console.error("PostgreSQL connection failed:", error.message);
+   console.error("PostgreSQL connection failed:", error);
     process.exit(1);
   }
 }
